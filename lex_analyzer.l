@@ -11,8 +11,6 @@ int contador = 0;
 %}
 
 /* Definições */
-NUMBER                [0-9]+
-
 CHAR_VALUE            [\'][a-zA-Z][\']
 INT_VALUE             [-+]?[0-9]+
 FLOAT_VALUE           [-+]?[0-9]*\.?[0-9]+
@@ -24,10 +22,13 @@ VETOR                 [a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])+
 TIPO                  bool|int|float|char|str
 OP_COMPAR             <|>|==|!=|>=|<=
 OP_LOGICA             or|and
-			// NÃO ESQUECER DE IMPLEMENTAR O 'NOT'
 
 %%
 {TIPO}                                 {strncpy(yylval.simbolo, yytext, 50); return TIPO;}
+
+if                                     {strncpy(yylval.simbolo, yytext, 50); return IF;}
+else                                   {strncpy(yylval.simbolo, yytext, 50); return ELSE;}
+while                                  {strncpy(yylval.simbolo, yytext, 50); return WHILE;}
 
 {OP_COMPAR}                            {yylval.strVal = strdup(yytext); return OP_COMPAR;}
 {OP_LOGICA}                            {yylval.strVal = strdup(yytext); return OP_LOGICA;}
@@ -43,7 +44,6 @@ OP_LOGICA             or|and
 {ID}                                   {strncpy(yylval.simbolo, yytext, 50); return ID;}		// Ex: a, a01, _a02
 {VETOR}                                {strncpy(yylval.simbolo, yytext, 50); return VETOR;}		// Ex: a[2], _b01[5]
 
-
 "="                                    {strncpy(yylval.simbolo, yytext, 50); return EQU;}
 
 "\+"                                   {return ADD;}		/* Aritmética básica */
@@ -55,7 +55,7 @@ OP_LOGICA             or|and
 "\("                                   {return APAR;}
 "\)"                                   {return FPAR;}
 "\n"                                   {contador++; return EOL;}
-"\t"                                   {return IDENT;}
+"\t"                                   {strncpy(yylval.simbolo, yytext, 50); return IDENT;}
 
 %%
 /* Fim das Regras */

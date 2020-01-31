@@ -51,6 +51,7 @@ No* novo_no(char[50], No**, int);
 void imprimir_tabela_de_simbolos(RegistroTS*);
 int verifica_entrada_na_tabela_de_simbolos(char*);
 void inserir_na_tabela_de_simbolos(RegistroTS);
+void remover_da_tabela_de_simbolos(RegistroTS*);
 RegistroTS* getVariavelDaTabela(char*);
 
 
@@ -84,7 +85,6 @@ void zeroDivisionError(void);
 	char charVal;
 	char* strVal;
 }
-%token NUM
 %token ADD SUB MUL DIV				/* ARITMÉTICA */
 %token OP_COMPAR OP_LOGICA			/* OPERAÇÕES LÓGICAS*/
 %token EQU
@@ -98,6 +98,8 @@ void zeroDivisionError(void);
 %token ID
 %token VETOR
 
+%token IF ELSE
+%token WHILE
 %token APAR FPAR
 
 %token<intVal>   VALOR_INTEIRO
@@ -105,11 +107,6 @@ void zeroDivisionError(void);
 %token<strVal>   VALOR_CARACTERE
 %token<strVal>   VALOR_STRING
 %token<strVal>   VALOR_LOGICO
-
-/*%type<no> termo
-%type<no> fator
-%type<no> exp
-%type<no> const*/
 
 %type<no> TERMO
 %type<no> FATOR
@@ -122,18 +119,18 @@ void zeroDivisionError(void);
 %type<no> EXPRESSAO_ARIT
 %type<no> EXPRESSAO_LOG
 %type<number> DECLARACAO
-
-%type<number> attr
-%type<number> FLO
+%type<number> ATTR
+%type<number> ESTRUTURA_SELECAO
 
 %type<simbolo> ADD SUB
 %type<simbolo> MUL DIV
 %type<strVal> OP_COMPAR
 %type<strVal> OP_LOGICA
 
-%type<simbolo> TIPO  
-%type<simbolo> NUM
+%type<simbolo> TIPO
 
+%type<simbolo> IF ELSE
+%type<simbolo> WHILE
 %type<simbolo> ID
 %type<simbolo> VETOR
 %type<simbolo> PV
@@ -144,12 +141,18 @@ void zeroDivisionError(void);
 %%
 /* Regras de Sintaxe */
 
-PROG: EXPRESSAO_ARIT EOL | EXPRESSAO_LOG EOL
+PROG: PROG EOL {imprimir_tabela_de_simbolos(tabela_de_simbolos);}
+	| EXPRESSAO_ARIT EOL | EXPRESSAO_LOG EOL
 	| PROG EXPRESSAO_ARIT EOL
 	| PROG EXPRESSAO_LOG EOL
+
+	| ATTR EOL | ATTR PV | PROG ATTR EOL
+	| PROG ATTR PV EOL
+
 	| DECLARACAO EOL | DECLARACAO PV | PROG DECLARACAO PV
-	| PROG DECLARACAO EOL
-	| PROG DECLARACAO PV EOL;
+	| PROG DECLARACAO EOL | PROG DECLARACAO PV EOL
+	| ESTRUTURA_SELECAO | PROG ESTRUTURA_SELECAO
+	| ESTRUTURA_REPETICAO | PROG ESTRUTURA_REPETICAO;
 
 
 DECLARACAO: TIPO ID					{
@@ -170,7 +173,7 @@ DECLARACAO: TIPO ID					{
 											printf("Erro! Múltiplas declarações de variável\n");
 											exit(1);
 										}
-										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									}
 
 	| TIPO VETOR					{
@@ -191,16 +194,160 @@ DECLARACAO: TIPO ID					{
 											printf("Erro! Múltiplas declarações de variável\n");
 											exit(1);
 										}
-										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									};
+
+ATTR: ID EQU ID						{
+										RegistroTS* var1 = getVariavelDaTabela($1);
+										RegistroTS* var2 = getVariavelDaTabela($3);
+										if (var2 == NULL) {printf("Variável %s não declarada;\n", $1); exit(1);}
+										if (var1 == NULL) {
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, var2->tipo, 15);
+											registro.endereco = var2->endereco;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											strcpy(var1->tipo, var2->tipo);
+											var1->endereco = var2->endereco;
+											$$ = 1;
+										}
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| ID EQU VALOR_LOGICO			{
+										RegistroTS* var1 = getVariavelDaTabela($1);
+										if (var1 == NULL) {
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "bool", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 1;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											remover_da_tabela_de_simbolos(var1);
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "bool", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 1;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| ID EQU VALOR_INTEIRO			{
+										RegistroTS* var1 = getVariavelDaTabela($1);
+										if (var1 == NULL) {
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "int", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 4;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											remover_da_tabela_de_simbolos(var1);
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "int", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 4;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| ID EQU VALOR_FLOAT			{
+										RegistroTS* var1 = getVariavelDaTabela($1);
+										if (var1 == NULL) {
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "float", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 8;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											remover_da_tabela_de_simbolos(var1);
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "float", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 8;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| ID EQU VALOR_CARACTERE		{
+										RegistroTS* var1 = getVariavelDaTabela($1);
+										if (var1 == NULL) {
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "str", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 1;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											remover_da_tabela_de_simbolos(var1);
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "str", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += 1;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| ID EQU VALOR_STRING			{
+										RegistroTS* var1 = getVariavelDaTabela($1);
+										if (var1 == NULL) {
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "str", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += strlen($3)-2;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											remover_da_tabela_de_simbolos(var1);
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $1, 50);
+											strncpy(registro.tipo, "str", 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += strlen($3)-2;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									};
 
 EXPRESSAO_ARIT: TERMO				{
 										imprimir_arvore($1);printf("\n\n");
-										imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									}
 	| EXPRESSAO_ARIT TERMO			{ 
 										imprimir_arvore($2);printf("\n\n");
-										imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									};
 
 TERMO: FATOR
@@ -270,11 +417,9 @@ CONST: VALOR_INTEIRO				{
 
 EXPRESSAO_LOG: TERMO_LOG			{
 										imprimir_arvore($1);printf("\n\n");
-										imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									}
 	| EXPRESSAO_LOG TERMO_LOG		{
 										imprimir_arvore($1);printf("\n\n");
-										imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									};
 
 TERMO_LOG: FATOR_LOG
@@ -313,32 +458,17 @@ CONST_LOG: VALOR_LOGICO				{ $$ = novo_no($1, NULL, 0); }
 										}
 									};
 
+ESTRUTURA_SELECAO: IF EXPRESSAO_LOG DP EOL IDENT_CORPO		{}
+	| IF APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO			{};
 
+ESTRUTURA_REPETICAO: WHILE EXPRESSAO_LOG DP EOL IDENT_CORPO		{}
+	| WHILE APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO			{};
 
-/*
-attr: ID EQU ID EOL       {
-                          int var1_existe = verifica_entrada_na_tabela_de_simbolos($1);
-                          int var2_existe = verifica_entrada_na_tabela_de_simbolos($3);
-                          if (!var2_existe){
-                          printf("VAR_2 NÃO EXISTE\n"); exit(-1);
-                          }
-                          };
-*/
-/*
-attr: ID EQU ID           {
-                          char a[15], b[15], c[15];
-                          strncpy(a, $1, 15);
-                          strncpy(b, $2, 15);
-                          strncpy(c, $3, 15);
-                          printf("%s %s %s", $1, $2, $3)
-                          };
-    | ID EQU exp          {
-                          char a[15], b[15];
-                          strncpy(a, $1, 15);
-                          strncpy(b, $2, 15);
-                          printf("%s %s", $1, $2)
-                          }
-*/
+IDENT_CORPO: IDENT COMANDO
+	| IDENT_CORPO IDENT COMANDO;
+
+COMANDO: ATTR EOL | ATTR PV EOL 
+	| DECLARACAO EOL | DECLARACAO PV EOL; // | ESTRUTURA_SELECAO;
 
 %%
 
@@ -407,6 +537,18 @@ void inserir_na_tabela_de_simbolos(RegistroTS registro) {
     }
     tabela_de_simbolos[prox_posicao_livre] = registro;
     prox_posicao_livre++;
+}
+
+void remover_da_tabela_de_simbolos(RegistroTS* registro){
+	int i;
+	int posicao_anterior = 0;
+	for (i = 0;i<prox_posicao_livre;i++){
+		if (strcmp(registro->lexema, tabela_de_simbolos[i].lexema) == 0){
+			strcpy(tabela_de_simbolos[i].token, "-");
+			strcpy(tabela_de_simbolos[i].lexema, "-");
+			strcpy(tabela_de_simbolos[i].tipo, "-");
+		}
+	}
 }
 
 void imprimir_tabela_de_simbolos(RegistroTS *tabela_de_simbolos) {
