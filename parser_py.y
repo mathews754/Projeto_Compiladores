@@ -18,6 +18,7 @@ OU
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+//#include <math.h>
 
 int yywrap(void);
 int yylex(void);
@@ -36,7 +37,6 @@ enum tipos{INT, FLOAT, CHAR, STRING};
 typedef struct registro_da_tabela_de_simbolo {
     char token[50];
     char lexema[50];
-    /*int tipo;*/
 	char tipo[15];
     int endereco;
 } RegistroTS;
@@ -61,6 +61,11 @@ int getTamanhoPorTipo(char*);
 int getTamanhoVetor(char*, char*);
 char* getVetorPorNome(char*);
 int charToInt(char);
+int strToInt(char*);
+int pow(int, int);
+
+char* intToStr(int, char*);
+char* floatToStr(float, char*);
 
 
 /* FUNÇÕES DE ERRO */
@@ -72,31 +77,56 @@ void zeroDivisionError(void);
 /* Declaração de Tokens no formato %token NOME_DO_TOKEN */
 %union 
 {
-    int number;
-    char simbolo[50];
-    struct No* no;
+	int number;
+	char simbolo[50];
+	struct No* no;
+
+	int intVal;
+	float floatVal;
+	char charVal;
+	char* strVal;
 }
 %token NUM
-%token ADD
-%token SUB
-%token MUL
-%token DIV
-%token APAR
-%token FPAR
-%token EOL
-%token ID
-%token VETOR
-%token TIPO
-%token PV
-%token IDENT
+%token ADD SUB MUL DIV /* ARITMÉTICA */
+%token LOGICAL_OP      /* OPERAÇÕES LÓGICAS*/
 %token EQU
 
-%type<no> termo
+%token EOL
+%token PV
+%token DP
+%token IDENT
+
+%token TIPO
+%token ID
+%token VETOR
+
+%token APAR FPAR
+
+%token<intVal>   VALOR_INTEIRO
+%token<floatVal> VALOR_FLOAT
+%token<charVal>  VALOR_CARACTERE
+%token<strVal>   VALOR_STRING
+%token<strVal>   VALOR_LOGICO
+
+/*%type<no> termo
 %type<no> fator
 %type<no> exp
-%type<no> const
-%type<no> attr
-%type<number> dec
+%type<no> const*/
+
+%type<no> TERMO
+%type<no> FATOR
+%type<no> CONST
+
+%type<no> TERMO_LOG
+%type<no> FATOR_LOG
+%type<no> CONST_LOG
+
+%type<no> EXPRESSAO_ARIT
+%type<number> DECLARACAO
+
+%type<number> attr
+%type<number> FLO
+
 %type<simbolo> TIPO  
 %type<simbolo> NUM
 %type<simbolo> MUL
@@ -106,196 +136,161 @@ void zeroDivisionError(void);
 %type<simbolo> ID
 %type<simbolo> VETOR
 %type<simbolo> PV
+%type<simbolo> DP
 %type<simbolo> IDENT
 %type<simbolo> EQU
-
 
 %%
 /* Regras de Sintaxe */
 
-prog: EOL {
-            imprimir_tabela_de_simbolos(tabela_de_simbolos);
-    }
-   | dec | exp 
-   | prog dec 
-   | prog exp
-   | prog dec exp
-;
+PROG: EXPRESSAO_ARIT EOL 
+	| PROG EXPRESSAO_ARIT EOL
+	| DECLARACAO EOL | DECLARACAO PV | PROG DECLARACAO PV
+	| PROG DECLARACAO EOL
+	| PROG DECLARACAO PV EOL;
 
-/* 
-prog: EOL
-   | dec EOL | dec PV
-   | exp EOL | exp PV
-   prog dec EOL | prog dec PV
-   prog exp EOL | prog exp PV
-*/
+/*EXPRESSAO_ARIT: VALOR_INTEIRO {printf("INTEIRO = %d\n", $1);}
+	|  VALOR_CARACTERE {printf("CHAR = %c\n", $1);}
+	|  VALOR_STRING {printf("STRING = %s\n", $1);};*/
 
-dec: TIPO ID EOL
-	{
-            int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
-			int size;
-            if (!var_existe) { 
-                RegistroTS registro;
-                strncpy(registro.token, "ID", 50);
-                strncpy(registro.lexema, $2, 50);
-				strncpy(registro.tipo, $1, 15);
-                //registro.tipo = $1;
-				//printf("Tipo: %s\n\n", registro.tipo);
-                registro.endereco = prox_mem_livre;
-				size = getTamanhoPorTipo($1);
-                prox_mem_livre += size;
-                inserir_na_tabela_de_simbolos(registro);
-                $$ = 1;
-            }
-            else {
-                printf("Erro! Múltiplas declarações de variável\n");
-                exit(1);
-            }
-            imprimir_tabela_de_simbolos(tabela_de_simbolos);
-        }
-   | TIPO ID PV EOL
-	{
-            int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
-			int size;
-            if (!var_existe) { 
-                RegistroTS registro;
-                strncpy(registro.token, "ID", 50);
-                strncpy(registro.lexema, $2, 50);
-				strncpy(registro.tipo, $1, 15);
-                //registro.tipo = $1;
-                registro.endereco = prox_mem_livre;
-				size = getTamanhoPorTipo($1);
-                prox_mem_livre += size;
-                inserir_na_tabela_de_simbolos(registro);
-                $$ = 1;
-            }
-            else {
-                printf("Erro! Múltiplas declarações de variável\n");
-                exit(1);
-            }
-            imprimir_tabela_de_simbolos(tabela_de_simbolos);
-        }
-   |  TIPO ID PV dec
-	{
-            int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
-			int size;
-            if (!var_existe) { 
-                RegistroTS registro;
-                strncpy(registro.token, "ID", 50);
-                strncpy(registro.lexema, $2, 50);
-				strncpy(registro.tipo, $1, 15);
-                //registro.tipo = $1;
-                registro.endereco = prox_mem_livre;
-				size = getTamanhoPorTipo($1);
-                prox_mem_livre += size;
-                inserir_na_tabela_de_simbolos(registro);
-                $$ = 1;
-            }
-            else {
-                printf("Erro! Múltiplas declarações de variável\n");
-                exit(1);
-            }
-            imprimir_tabela_de_simbolos(tabela_de_simbolos);
-        }
-   |  TIPO VETOR EOL
-	{
-            int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
-			int size;
-			//char a[15];
-            if (!var_existe) { 
-                RegistroTS registro;
-                strncpy(registro.token, "ID", 50);
-				//strncpy(a, getVetorPorNome($2), 15);
-				//printf("a = %s", a);
-				size = getTamanhoVetor($1, $2);
-                strncpy(registro.lexema, getVetorPorNome($2), 50); // NOTA: A PARTE DE INDICE SE PERDE A PARTIR DAQUI
-				strncpy(registro.tipo, $1, 15);
-                registro.endereco = prox_mem_livre;
-                prox_mem_livre += size;
-                inserir_na_tabela_de_simbolos(registro);
-                $$ = 1;
-            }
-            else {
-                printf("Erro! Múltiplas declarações de variável\n");
-                exit(1);
-            }
-            imprimir_tabela_de_simbolos(tabela_de_simbolos);
-        }
-    ;
+DECLARACAO: TIPO ID					{
+										int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
+										int size;
+										if (!var_existe) { 
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											strncpy(registro.lexema, $2, 50);
+											strncpy(registro.tipo, $1, 15);
+											registro.endereco = prox_mem_livre;
+											size = getTamanhoPorTipo($1);
+											prox_mem_livre += size;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											printf("Erro! Múltiplas declarações de variável\n");
+											exit(1);
+										}
+										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+
+	| TIPO VETOR					{
+										int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
+										int size;
+										if (!var_existe) { 
+											RegistroTS registro;
+											strncpy(registro.token, "ID", 50);
+											size = getTamanhoVetor($1, $2);
+											strncpy(registro.lexema, getVetorPorNome($2), 50); // NOTA: A PARTE DE INDICE SE PERDE A PARTIR DAQUI
+											strncpy(registro.tipo, $1, 15);
+											registro.endereco = prox_mem_livre;
+											prox_mem_livre += size;
+											inserir_na_tabela_de_simbolos(registro);
+											$$ = 1;
+										}
+										else {
+											printf("Erro! Múltiplas declarações de variável\n");
+											exit(1);
+										}
+										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									};
+
+EXPRESSAO_ARIT: TERMO				{
+										imprimir_arvore($1);printf("\n\n");
+										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| EXPRESSAO_ARIT TERMO			{ 
+										imprimir_arvore($2);printf("\n\n");
+										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									};
+
+TERMO: FATOR
+	| TERMO ADD FATOR				{ 
+										No** filhos = (No**) malloc(sizeof(No*)*3);
+										filhos[0] = $1;
+										filhos[1] = novo_no("+", NULL, 0);
+										filhos[2] = $3;
+										No* raiz_exp = novo_no("termo", filhos, 3); 
+										$$ = raiz_exp;
+									}
+	| TERMO SUB FATOR				{ 
+										No** filhos = (No**) malloc(sizeof(No*)*3);
+										filhos[0] = $1;
+										filhos[1] = novo_no("-", NULL, 0);
+										filhos[2] = $3;
+										No* raiz_exp = novo_no("termo", filhos, 3); 
+										$$ = raiz_exp;
+									};
+
+FATOR: CONST
+	| FATOR MUL CONST				{ 
+										No** filhos = (No**) malloc(sizeof(No*)*3);
+										filhos[0] = $1;
+										filhos[1] = novo_no("*", NULL, 0);
+										filhos[2] = $3;
+										No* raiz_termo = novo_no("fator", filhos, 3); 
+										$$ = raiz_termo;
+									}
+	| FATOR DIV CONST				{  
+										No** filhos = (No**) malloc(sizeof(No*)*3);
+										char denom[15];
+										strncpy(denom, $3, 15);
+										if (strcmp(denom, "0") == 0) {zeroDivisionError();}
+										filhos[0] = $1;
+										filhos[1] = novo_no("/", NULL, 0);
+										filhos[2] = $3;
+										No* raiz_termo = novo_no("fator", filhos, 3); 
+										$$ = raiz_termo;
+									};
+
+CONST: VALOR_INTEIRO				{ 
+										char buffer[50];
+										intToStr($1, buffer);
+										$$ = novo_no(buffer, NULL, 0); 
+									}
+	| VALOR_FLOAT					{ 
+										char buffer[50];
+										floatToStr($1, buffer);
+										$$ = novo_no(buffer, NULL, 0); 
+									}
+	| ID							{ 
+										int var_existe = verifica_entrada_na_tabela_de_simbolos($1);
+										if(var_existe) {
+										   $$ = novo_no($1, NULL, 0);  
+										}
+										else {
+										   printf("Variável %s não declarada;\n", $1);
+										   exit(1);
+										}
+									};
+
+
+
 
 /*
-attr: 
-   | ID EQU exp           {
-                          char a[15], b[15];
-                          strncpy(a, $1, 15);
-                          strncpy(b, $2, 15);
-                          printf("%s %s", $1, $2)
+attr: ID EQU ID EOL       {
+                          int var1_existe = verifica_entrada_na_tabela_de_simbolos($1);
+                          int var2_existe = verifica_entrada_na_tabela_de_simbolos($3);
+                          if (!var2_existe){
+                          printf("VAR_2 NÃO EXISTE\n"); exit(-1);
                           }
-   | ID EQU ID            {
+                          };
+*/
+/*
+attr: ID EQU ID           {
                           char a[15], b[15], c[15];
                           strncpy(a, $1, 15);
                           strncpy(b, $2, 15);
                           strncpy(c, $3, 15);
                           printf("%s %s %s", $1, $2, $3)
                           };
+    | ID EQU exp          {
+                          char a[15], b[15];
+                          strncpy(a, $1, 15);
+                          strncpy(b, $2, 15);
+                          printf("%s %s", $1, $2)
+                          }
 */
-
-exp:
-    | exp termo EOL       { 
-                            imprimir_arvore($2);printf("\n\n");
-                            imprimir_tabela_de_simbolos(tabela_de_simbolos);
-                          };
-termo: fator               
-   | termo ADD fator       { 
-                            No** filhos = (No**) malloc(sizeof(No*)*3);
-                            filhos[0] = $1;
-                            filhos[1] = novo_no("+", NULL, 0);
-                            filhos[2] = $3;
-                            No* raiz_exp = novo_no("termo", filhos, 3); 
-                            $$ = raiz_exp;
-                         }
-   | termo SUB fator       { 
-                            No** filhos = (No**) malloc(sizeof(No*)*3);
-                            filhos[0] = $1;
-                            filhos[1] = novo_no("-", NULL, 0);
-                            filhos[2] = $3;
-                            No* raiz_exp = novo_no("termo", filhos, 3); 
-                            $$ = raiz_exp;
-                        }
-   ;
-fator: const            
-     | fator MUL const  { 
-                            No** filhos = (No**) malloc(sizeof(No*)*3);
-                            filhos[0] = $1;
-                            filhos[1] = novo_no("*", NULL, 0);
-                            filhos[2] = $3;
-                            No* raiz_termo = novo_no("fator", filhos, 3); 
-                            $$ = raiz_termo;
-                        }
-     | fator DIV const  {  
-                            No** filhos = (No**) malloc(sizeof(No*)*3);
-							char denom[15];
-                            strncpy(denom, $3, 15);
-							if (strcmp(denom, "0") == 0) {zeroDivisionError();}
-                            filhos[0] = $1;
-                            filhos[1] = novo_no("/", NULL, 0);
-                            filhos[2] = $3;
-                            No* raiz_termo = novo_no("fator", filhos, 3); 
-                            $$ = raiz_termo;
-                        }
-     ;
-
-const: NUM { $$ = novo_no($1, NULL, 0); }  
-    |  ID  { 
-               int var_existe = verifica_entrada_na_tabela_de_simbolos($1);
-               if(var_existe) {
-                   $$ = novo_no($1, NULL, 0);  
-               }
-               else {
-                   printf("Variável %s não declarada;\n", $1);
-                   exit(1);
-               }
-           }
 
 %%
 
@@ -376,23 +371,41 @@ char* getVetorPorNome(char* str){
 }
 
 int getTamanhoPorTipo(char* tipo){
-	if (strcmp(tipo, "int") == 0) {return 4;}
-	else if (strcmp(tipo, "float") == 0) {return 8;}
+	if (strcmp(tipo, "char") == 0) {return 1;}
+	else if (strcmp(tipo, "int") == 0) {return 4;}
+	else if (strcmp(tipo, "float") == 0) {return 8;} // Falta Strings
 	return 0;
 }
 
 int charToInt(char a){
 	int i = a - 48;
-	printf("a = %d\n\n", i);
 	if (i < 10) return i;
 	else return 0;
+}
+
+int pow(int a, int b){
+	int i;
+	int n = a;
+	if (b == 0) return 1;
+	else if (b == 1) return a;
+	else for (i=0;i<b-1;i++) n*=a;
+	return n;
+}
+
+int strToInt(char* str){							// FUNÇÃO PODE DAR PROBLEMA EM SITUAÇÕES DIFERENTES
+	int i;
+	int n = 0;
+	int idx = 0;
+	while(str[idx] >= '0' && str[idx] <= '9') idx++;
+	for (i=0;i<idx;i++) n += (str[i] - 48) * pow(10,idx-i-1);
+	return n;
 }
 
 int getTamanhoVetor(char* tipo, char* vetor){		// No estado atual, essa função só calcula o tamanho para um vetor de tamanho < 10;
 	int somaTam = 0;
 	char* idx;
 	idx = strchr(vetor, '[') + 1;
-	somaTam += getTamanhoPorTipo(tipo) * charToInt(idx[0]);
+	somaTam += getTamanhoPorTipo(tipo) * strToInt(idx);
 	return somaTam;
 }
 
@@ -415,6 +428,16 @@ int getTamanhoVetor(char* tipo, char* vetor){		// No estado atual, essa função
 [2][3]
 [2][3][4]
 */
+
+char* intToStr(int i, char* str){
+	snprintf(str, 50, "%d", i);
+	return str;
+}
+
+char* floatToStr(float f, char* str){
+	snprintf(str, 50, "%f", f);
+	return str;
+}
 
 int main(int argc, char** argv) {
     yyparse();

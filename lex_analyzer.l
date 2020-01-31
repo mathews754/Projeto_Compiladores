@@ -12,24 +12,37 @@ int contador = 0;
 
 /* Definições */
 NUMBER                [0-9]+
-ID                    [a-zA-Z_][a-zA-Z_0-9]*
-VETOR                 [a-zA-Z][_a-zA-Z0-9]*(\[[0-9]+\])+
-TIPO                  int|float|double|char|string
 
-/* Início das Regras */
+CHAR_VALUE            [\'][a-zA-Z][\']
+INT_VALUE             [-+]?[0-9]+
+FLOAT_VALUE           [-+]?[0-9]*\.?[0-9]+
+STRING_VALUE          \"(\\.|[^"])*\"
+LOGICAL_VALUE         True|False
+
+ID                    [a-zA-Z_][a-zA-Z_0-9]*
+VETOR                 [a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])+
+TIPO                  int|float|double|char|string|str
+LOGICAL_OP            or|and|not|<|>|==|!=|>=|<=
+
+
 %%
-{NUMBER}                               {strncpy(yylval.simbolo, yytext, 50); return NUM;}
 {TIPO}                                 {strncpy(yylval.simbolo, yytext, 50); return TIPO;}
-{ID}                                   {strncpy(yylval.simbolo, yytext, 50); return ID;}
+
+{LOGICAL_OP}                           {strncpy(yylval.simbolo, yytext, 50); return LOGICAL_OP;}
+":"                                    {strncpy(yylval.simbolo, yytext, 50); return DP;}
 ";"                                    {strncpy(yylval.simbolo, yytext, 50); return PV;}
 
-[\'][a-zA-Z][\']                       {printf("Caractere: %c", yytext[1]);}
-[-+]?[0-9]+                            {printf("Inteiro: %d", atoi(yytext));}
-[-+]?[0-9]*\.?[0-9]+                   {printf("Float: %f", atof(yytext));}
-[a-zA-Z][_a-zA-Z0-9]*(\[[0-9]+\])+     {strncpy(yylval.simbolo, yytext, 50); return VETOR;} /*{printf("Vetor: %s", strdup(yytext));}*/
+{CHAR_VALUE}                           {yylval.charVal = yytext[1]; return VALOR_CARACTERE;}        // {printf("Caractere: %c", yytext[1]);}
+{INT_VALUE}                            {yylval.intVal = atoi(yytext); return VALOR_INTEIRO;}        // {printf("Inteiro: %d", atoi(yytext));}
+{FLOAT_VALUE}                          {yylval.floatVal = atof(yytext); return VALOR_FLOAT;}        // {printf("Float: %f", atof(yytext));}
+{STRING_VALUE}                         {yylval.strVal = strdup(yytext); return VALOR_STRING;} 
+{LOGICAL_VALUE}                        {yylval.strVal = strdup(yytext); return VALOR_LOGICO;}
+
+{ID}                                   {strncpy(yylval.simbolo, yytext, 50); return ID;}		// Ex: a, a01, _a02
+{VETOR}                                {strncpy(yylval.simbolo, yytext, 50); return VETOR;}		// Ex: a[2], _b01[5]
 
 
-"="                                    {return EQU;}
+"="                                    {strncpy(yylval.simbolo, yytext, 50); return EQU;}
 "\+"                                   {return ADD;}		/* Aritmética básica */
 "\-"                                   {return SUB;}
 "\*"                                   {return MUL;}
