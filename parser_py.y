@@ -31,9 +31,6 @@ typedef struct No {
 } No;
 
 char ultimo_erro[1024];
-
-enum tipos{INT, FLOAT, CHAR, STRING};
-
 typedef struct registro_da_tabela_de_simbolo {
     char token[50];
     char lexema[50];
@@ -54,6 +51,7 @@ No* novo_no(char[50], No**, int);
 void imprimir_tabela_de_simbolos(RegistroTS*);
 int verifica_entrada_na_tabela_de_simbolos(char*);
 void inserir_na_tabela_de_simbolos(RegistroTS);
+RegistroTS* getVariavelDaTabela(char*);
 
 
 /* UTIL */
@@ -87,8 +85,8 @@ void zeroDivisionError(void);
 	char* strVal;
 }
 %token NUM
-%token ADD SUB MUL DIV /* ARITMÉTICA */
-%token LOGICAL_OP      /* OPERAÇÕES LÓGICAS*/
+%token ADD SUB MUL DIV				/* ARITMÉTICA */
+%token OP_COMPAR OP_LOGICA			/* OPERAÇÕES LÓGICAS*/
 %token EQU
 
 %token EOL
@@ -104,7 +102,7 @@ void zeroDivisionError(void);
 
 %token<intVal>   VALOR_INTEIRO
 %token<floatVal> VALOR_FLOAT
-%token<charVal>  VALOR_CARACTERE
+%token<strVal>   VALOR_CARACTERE
 %token<strVal>   VALOR_STRING
 %token<strVal>   VALOR_LOGICO
 
@@ -122,17 +120,20 @@ void zeroDivisionError(void);
 %type<no> CONST_LOG
 
 %type<no> EXPRESSAO_ARIT
+%type<no> EXPRESSAO_LOG
 %type<number> DECLARACAO
 
 %type<number> attr
 %type<number> FLO
 
+%type<simbolo> ADD SUB
+%type<simbolo> MUL DIV
+%type<strVal> OP_COMPAR
+%type<strVal> OP_LOGICA
+
 %type<simbolo> TIPO  
 %type<simbolo> NUM
-%type<simbolo> MUL
-%type<simbolo> DIV
-%type<simbolo> SUB
-%type<simbolo> ADD
+
 %type<simbolo> ID
 %type<simbolo> VETOR
 %type<simbolo> PV
@@ -143,15 +144,13 @@ void zeroDivisionError(void);
 %%
 /* Regras de Sintaxe */
 
-PROG: EXPRESSAO_ARIT EOL 
+PROG: EXPRESSAO_ARIT EOL | EXPRESSAO_LOG EOL
 	| PROG EXPRESSAO_ARIT EOL
+	| PROG EXPRESSAO_LOG EOL
 	| DECLARACAO EOL | DECLARACAO PV | PROG DECLARACAO PV
 	| PROG DECLARACAO EOL
 	| PROG DECLARACAO PV EOL;
 
-/*EXPRESSAO_ARIT: VALOR_INTEIRO {printf("INTEIRO = %d\n", $1);}
-	|  VALOR_CARACTERE {printf("CHAR = %c\n", $1);}
-	|  VALOR_STRING {printf("STRING = %s\n", $1);};*/
 
 DECLARACAO: TIPO ID					{
 										int var_existe = verifica_entrada_na_tabela_de_simbolos($2);
@@ -256,14 +255,63 @@ CONST: VALOR_INTEIRO				{
 	| ID							{ 
 										int var_existe = verifica_entrada_na_tabela_de_simbolos($1);
 										if(var_existe) {
-										   $$ = novo_no($1, NULL, 0);  
+											RegistroTS* var = getVariavelDaTabela($1);
+											if (strcmp(var->tipo, "str") == 0 || strcmp(var->tipo, "char") == 0){
+												printf("ERROR: operando type(%s) não suportado para esta operação;\n", var->tipo);
+												exit(1);
+											}
+											$$ = novo_no($1, NULL, 0);  
 										}
 										else {
-										   printf("Variável %s não declarada;\n", $1);
-										   exit(1);
+											printf("Variável %s não declarada;\n", $1);
+											exit(1);
 										}
 									};
 
+EXPRESSAO_LOG: TERMO_LOG			{
+										imprimir_arvore($1);printf("\n\n");
+										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									}
+	| EXPRESSAO_LOG TERMO_LOG		{
+										imprimir_arvore($1);printf("\n\n");
+										imprimir_tabela_de_simbolos(tabela_de_simbolos);
+									};
+
+TERMO_LOG: FATOR_LOG
+	| TERMO_LOG OP_LOGICA FATOR_LOG	{
+										No** filhos = (No**) malloc(sizeof(No*)*3);
+										filhos[0] = $1;
+										filhos[1] = novo_no($2, NULL, 0);
+										filhos[2] = $3;
+										No* raiz_exp = novo_no("termo_log", filhos, 3); 
+										$$ = raiz_exp;
+									};
+
+FATOR_LOG: CONST_LOG
+	| FATOR_LOG OP_COMPAR CONST_LOG	{ 
+										No** filhos = (No**) malloc(sizeof(No*)*3);
+										filhos[0] = $1;
+										filhos[1] = novo_no($2, NULL, 0);
+										filhos[2] = $3;
+										No* raiz_termo = novo_no("fator_log", filhos, 3); 
+										$$ = raiz_termo;
+									};
+
+CONST_LOG: VALOR_LOGICO				{ $$ = novo_no($1, NULL, 0); }
+	| VALOR_CARACTERE				{ $$ = novo_no($1, NULL, 0); }
+	| VALOR_INTEIRO					{ char buffer[50]; intToStr($1, buffer); $$ = novo_no(buffer, NULL, 0); }
+	| VALOR_FLOAT					{ char buffer[50]; floatToStr($1, buffer); $$ = novo_no(buffer, NULL, 0); }
+	| VALOR_STRING					{ $$ = novo_no($1, NULL, 0); }
+	| ID							{ 
+										int var_existe = verifica_entrada_na_tabela_de_simbolos($1);
+										if(var_existe) {
+											$$ = novo_no($1, NULL, 0);  
+										}
+										else {
+											printf("Variável %s não declarada;\n", $1);
+											exit(1);
+										}
+									};
 
 
 
@@ -342,6 +390,16 @@ int verifica_entrada_na_tabela_de_simbolos(char *variavel) {
     return 0;
 }
 
+RegistroTS* getVariavelDaTabela(char* variavel){
+	int check = verifica_entrada_na_tabela_de_simbolos(variavel);
+	for(int i = 0; i < prox_posicao_livre; i++) {
+            if( strncmp(tabela_de_simbolos[i].lexema, variavel, 50) == 0) {
+            return &tabela_de_simbolos[i];
+        }
+    }
+    return NULL;
+}
+
 void inserir_na_tabela_de_simbolos(RegistroTS registro) {
     if (prox_posicao_livre == TAM_TABELA_DE_SIMBOLOS) {
         printf("Erro! Tabela de Símbolos Cheia!\n");
@@ -371,9 +429,10 @@ char* getVetorPorNome(char* str){
 }
 
 int getTamanhoPorTipo(char* tipo){
-	if (strcmp(tipo, "char") == 0) {return 1;}
-	else if (strcmp(tipo, "int") == 0) {return 4;}
-	else if (strcmp(tipo, "float") == 0) {return 8;} // Falta Strings
+	if (strcmp(tipo, "bool") == 0) return 1;
+	else if (strcmp(tipo, "char") == 0) return 1;
+	else if (strcmp(tipo, "int") == 0) return 4;
+	else if (strcmp(tipo, "float") == 0) return 8; // Falta Strings
 	return 0;
 }
 

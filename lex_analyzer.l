@@ -21,18 +21,20 @@ LOGICAL_VALUE         True|False
 
 ID                    [a-zA-Z_][a-zA-Z_0-9]*
 VETOR                 [a-zA-Z_][a-zA-Z0-9_]*(\[[0-9]+\])+
-TIPO                  int|float|double|char|string|str
-LOGICAL_OP            or|and|not|<|>|==|!=|>=|<=
-
+TIPO                  bool|int|float|char|str
+OP_COMPAR             <|>|==|!=|>=|<=
+OP_LOGICA             or|and
+			// NÃO ESQUECER DE IMPLEMENTAR O 'NOT'
 
 %%
 {TIPO}                                 {strncpy(yylval.simbolo, yytext, 50); return TIPO;}
 
-{LOGICAL_OP}                           {strncpy(yylval.simbolo, yytext, 50); return LOGICAL_OP;}
+{OP_COMPAR}                            {yylval.strVal = strdup(yytext); return OP_COMPAR;}
+{OP_LOGICA}                            {yylval.strVal = strdup(yytext); return OP_LOGICA;}
 ":"                                    {strncpy(yylval.simbolo, yytext, 50); return DP;}
 ";"                                    {strncpy(yylval.simbolo, yytext, 50); return PV;}
 
-{CHAR_VALUE}                           {yylval.charVal = yytext[1]; return VALOR_CARACTERE;}        // {printf("Caractere: %c", yytext[1]);}
+{CHAR_VALUE}                           {yylval.strVal = strdup(yytext); return VALOR_CARACTERE;}        // {printf("Caractere: %c", yytext[1]);}
 {INT_VALUE}                            {yylval.intVal = atoi(yytext); return VALOR_INTEIRO;}        // {printf("Inteiro: %d", atoi(yytext));}
 {FLOAT_VALUE}                          {yylval.floatVal = atof(yytext); return VALOR_FLOAT;}        // {printf("Float: %f", atof(yytext));}
 {STRING_VALUE}                         {yylval.strVal = strdup(yytext); return VALOR_STRING;} 
@@ -43,6 +45,7 @@ LOGICAL_OP            or|and|not|<|>|==|!=|>=|<=
 
 
 "="                                    {strncpy(yylval.simbolo, yytext, 50); return EQU;}
+
 "\+"                                   {return ADD;}		/* Aritmética básica */
 "\-"                                   {return SUB;}
 "\*"                                   {return MUL;}
