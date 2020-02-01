@@ -18,7 +18,6 @@ OU
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <math.h>
 
 int yywrap(void);
 int yylex(void);
@@ -173,7 +172,6 @@ DECLARACAO: TIPO ID					{
 											printf("Erro! Múltiplas declarações de variável\n");
 											exit(1);
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									}
 
 	| TIPO VETOR					{
@@ -181,10 +179,11 @@ DECLARACAO: TIPO ID					{
 										int size;
 										if (!var_existe) { 
 											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
+											strncpy(registro.token, "VETOR", 50);
 											size = getTamanhoVetor($1, $2);
 											strncpy(registro.lexema, getVetorPorNome($2), 50); // NOTA: A PARTE DE INDICE SE PERDE A PARTIR DAQUI
-											strncpy(registro.tipo, $1, 15);
+											if (strcmp($1, "char") == 0 && size > 1) strncpy(registro.tipo, "str", 15);
+											else strncpy(registro.tipo, $1, 15);
 											registro.endereco = prox_mem_livre;
 											prox_mem_livre += size;
 											inserir_na_tabela_de_simbolos(registro);
@@ -194,7 +193,6 @@ DECLARACAO: TIPO ID					{
 											printf("Erro! Múltiplas declarações de variável\n");
 											exit(1);
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									};
 
 ATTR: ID EQU ID						{
@@ -215,7 +213,6 @@ ATTR: ID EQU ID						{
 											var1->endereco = var2->endereco;
 											$$ = 1;
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
 									}
 	| ID EQU VALOR_LOGICO			{
 										RegistroTS* var1 = getVariavelDaTabela($1);
@@ -227,20 +224,15 @@ ATTR: ID EQU ID						{
 											registro.endereco = prox_mem_livre;
 											prox_mem_livre += 1;
 											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
 										else {
-											remover_da_tabela_de_simbolos(var1);
-											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
-											strncpy(registro.lexema, $1, 50);
-											strncpy(registro.tipo, "bool", 15);
-											registro.endereco = prox_mem_livre;
+											strncpy(var1->token, "ID", 50);
+											strncpy(var1->lexema, $1, 50);
+											strncpy(var1->tipo, "bool", 15);
+											var1->endereco = prox_mem_livre;
 											prox_mem_livre += 1;
-											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										$$ = 1;
 									}
 	| ID EQU VALOR_INTEIRO			{
 										RegistroTS* var1 = getVariavelDaTabela($1);
@@ -252,20 +244,15 @@ ATTR: ID EQU ID						{
 											registro.endereco = prox_mem_livre;
 											prox_mem_livre += 4;
 											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
 										else {
-											remover_da_tabela_de_simbolos(var1);
-											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
-											strncpy(registro.lexema, $1, 50);
-											strncpy(registro.tipo, "int", 15);
-											registro.endereco = prox_mem_livre;
+											strncpy(var1->token, "ID", 50);
+											strncpy(var1->lexema, $1, 50);
+											strncpy(var1->tipo, "int", 15);
+											var1->endereco = prox_mem_livre;
 											prox_mem_livre += 4;
-											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										$$ = 1;
 									}
 	| ID EQU VALOR_FLOAT			{
 										RegistroTS* var1 = getVariavelDaTabela($1);
@@ -277,20 +264,15 @@ ATTR: ID EQU ID						{
 											registro.endereco = prox_mem_livre;
 											prox_mem_livre += 8;
 											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
 										else {
-											remover_da_tabela_de_simbolos(var1);
-											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
-											strncpy(registro.lexema, $1, 50);
-											strncpy(registro.tipo, "float", 15);
-											registro.endereco = prox_mem_livre;
+											strncpy(var1->token, "ID", 50);
+											strncpy(var1->lexema, $1, 50);
+											strncpy(var1->tipo, "float", 15);
+											var1->endereco = prox_mem_livre;
 											prox_mem_livre += 8;
-											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										$$ = 1;
 									}
 	| ID EQU VALOR_CARACTERE		{
 										RegistroTS* var1 = getVariavelDaTabela($1);
@@ -302,45 +284,35 @@ ATTR: ID EQU ID						{
 											registro.endereco = prox_mem_livre;
 											prox_mem_livre += 1;
 											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
 										else {
-											remover_da_tabela_de_simbolos(var1);
-											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
-											strncpy(registro.lexema, $1, 50);
-											strncpy(registro.tipo, "str", 15);
-											registro.endereco = prox_mem_livre;
+											strncpy(var1->token, "ID", 50);
+											strncpy(var1->lexema, $1, 50);
+											strncpy(var1->tipo, "str", 15);
+											var1->endereco = prox_mem_livre;
 											prox_mem_livre += 1;
-											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
-										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										}	
+										$$ = 1;
 									}
 	| ID EQU VALOR_STRING			{
 										RegistroTS* var1 = getVariavelDaTabela($1);
 										if (var1 == NULL) {
 											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
+											strncpy(registro.token, "VETOR", 50);
 											strncpy(registro.lexema, $1, 50);
 											strncpy(registro.tipo, "str", 15);
 											registro.endereco = prox_mem_livre;
 											prox_mem_livre += strlen($3)-2;
 											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
 										else {
-											remover_da_tabela_de_simbolos(var1);
-											RegistroTS registro;
-											strncpy(registro.token, "ID", 50);
-											strncpy(registro.lexema, $1, 50);
-											strncpy(registro.tipo, "str", 15);
-											registro.endereco = prox_mem_livre;
+											strncpy(var1->token, "VETOR", 50);
+											strncpy(var1->lexema, $1, 50);
+											strncpy(var1->tipo, "str", 15);
+											var1->endereco = prox_mem_livre;
 											prox_mem_livre += strlen($3)-2;
-											inserir_na_tabela_de_simbolos(registro);
-											$$ = 1;
 										}
-										//imprimir_tabela_de_simbolos(tabela_de_simbolos);
+										$$ = 1;
 									};
 
 EXPRESSAO_ARIT: TERMO				{
@@ -458,17 +430,20 @@ CONST_LOG: VALOR_LOGICO				{ $$ = novo_no($1, NULL, 0); }
 										}
 									};
 
-ESTRUTURA_SELECAO: IF EXPRESSAO_LOG DP EOL IDENT_CORPO		{}
-	| IF APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO			{};
+ESTRUTURA_SELECAO: IF EXPRESSAO_LOG DP EOL IDENT_CORPO							{printf("---------FIM DO IF----------\n\n");}
+	| IF APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO								{printf("---------FIM DO IF----------\n\n");}
+	| IF EXPRESSAO_LOG DP EOL IDENT_CORPO ELSE DP EOL IDENT_CORPO				{printf("---------FIM DO IF----------\n\n");}
+	| IF APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO ELSE DP EOL IDENT_CORPO		{printf("---------FIM DO IF----------\n\n");};
 
-ESTRUTURA_REPETICAO: WHILE EXPRESSAO_LOG DP EOL IDENT_CORPO		{}
-	| WHILE APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO			{};
+
+ESTRUTURA_REPETICAO: WHILE EXPRESSAO_LOG DP EOL IDENT_CORPO		{printf("---------FIM DO WHILE----------\n\n");}
+	| WHILE APAR EXPRESSAO_LOG FPAR DP EOL IDENT_CORPO			{printf("---------FIM DO WHILE----------\n\n");};
 
 IDENT_CORPO: IDENT COMANDO
 	| IDENT_CORPO IDENT COMANDO;
 
 COMANDO: ATTR EOL | ATTR PV EOL 
-	| DECLARACAO EOL | DECLARACAO PV EOL; // | ESTRUTURA_SELECAO;
+	| DECLARACAO EOL | DECLARACAO PV EOL;
 
 %%
 
@@ -539,18 +514,6 @@ void inserir_na_tabela_de_simbolos(RegistroTS registro) {
     prox_posicao_livre++;
 }
 
-void remover_da_tabela_de_simbolos(RegistroTS* registro){
-	int i;
-	int posicao_anterior = 0;
-	for (i = 0;i<prox_posicao_livre;i++){
-		if (strcmp(registro->lexema, tabela_de_simbolos[i].lexema) == 0){
-			strcpy(tabela_de_simbolos[i].token, "-");
-			strcpy(tabela_de_simbolos[i].lexema, "-");
-			strcpy(tabela_de_simbolos[i].tipo, "-");
-		}
-	}
-}
-
 void imprimir_tabela_de_simbolos(RegistroTS *tabela_de_simbolos) {
     printf("----------- Tabela de Símbolos ---------------\n");
     for(int i = 0; i < prox_posicao_livre; i++) {
@@ -574,7 +537,7 @@ int getTamanhoPorTipo(char* tipo){
 	if (strcmp(tipo, "bool") == 0) return 1;
 	else if (strcmp(tipo, "char") == 0) return 1;
 	else if (strcmp(tipo, "int") == 0) return 4;
-	else if (strcmp(tipo, "float") == 0) return 8; // Falta Strings
+	else if (strcmp(tipo, "float") == 0) return 8;
 	return 0;
 }
 
@@ -593,7 +556,7 @@ int pow(int a, int b){
 	return n;
 }
 
-int strToInt(char* str){							// FUNÇÃO PODE DAR PROBLEMA EM SITUAÇÕES DIFERENTES
+int strToInt(char* str){
 	int i;
 	int n = 0;
 	int idx = 0;
@@ -602,33 +565,13 @@ int strToInt(char* str){							// FUNÇÃO PODE DAR PROBLEMA EM SITUAÇÕES DIFE
 	return n;
 }
 
-int getTamanhoVetor(char* tipo, char* vetor){		// No estado atual, essa função só calcula o tamanho para um vetor de tamanho < 10;
+int getTamanhoVetor(char* tipo, char* vetor){
 	int somaTam = 0;
 	char* idx;
 	idx = strchr(vetor, '[') + 1;
 	somaTam += getTamanhoPorTipo(tipo) * strToInt(idx);
 	return somaTam;
 }
-
-/*id = strchr(idx, ']') + 1;
-	id[0] = '\0';
-	id = id + 1;
-	printf("idx = %s\n", idx);*/			/*Lembrando que o indice mais a esquerda é multiplicado pelo tamanho do tipo*/
-	/*printf("idx[1] = %c\n", idx[1]);
-	printf("id = %s\n", id);*/
-	//while(idx[i]!=']') i++;
-	/*somaTam += atoi(idx[1]) * getTamanhoPorTipo(tipo);
-	idx[0] = ']';*/
-	/*while(strchr(idx, '[') != NULL) {
-		idx = strchr(idx, '[');
-		somaTam += atoi(idx[1]) * 8;
-	}
-*/
-/*
-[2]
-[2][3]
-[2][3][4]
-*/
 
 char* intToStr(int i, char* str){
 	snprintf(str, 50, "%d", i);

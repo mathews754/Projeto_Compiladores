@@ -35,9 +35,9 @@ while                                  {strncpy(yylval.simbolo, yytext, 50); ret
 ":"                                    {strncpy(yylval.simbolo, yytext, 50); return DP;}
 ";"                                    {strncpy(yylval.simbolo, yytext, 50); return PV;}
 
-{CHAR_VALUE}                           {yylval.strVal = strdup(yytext); return VALOR_CARACTERE;}        // {printf("Caractere: %c", yytext[1]);}
-{INT_VALUE}                            {yylval.intVal = atoi(yytext); return VALOR_INTEIRO;}        // {printf("Inteiro: %d", atoi(yytext));}
-{FLOAT_VALUE}                          {yylval.floatVal = atof(yytext); return VALOR_FLOAT;}        // {printf("Float: %f", atof(yytext));}
+{CHAR_VALUE}                           {yylval.strVal = strdup(yytext); return VALOR_CARACTERE;}
+{INT_VALUE}                            {yylval.intVal = atoi(yytext); return VALOR_INTEIRO;}
+{FLOAT_VALUE}                          {yylval.floatVal = atof(yytext); return VALOR_FLOAT;}
 {STRING_VALUE}                         {yylval.strVal = strdup(yytext); return VALOR_STRING;} 
 {LOGICAL_VALUE}                        {yylval.strVal = strdup(yytext); return VALOR_LOGICO;}
 
@@ -51,14 +51,11 @@ while                                  {strncpy(yylval.simbolo, yytext, 50); ret
 "\*"                                   {return MUL;}
 "/"                                    {return DIV;}
 
-
 "\("                                   {return APAR;}
 "\)"                                   {return FPAR;}
 "\n"                                   {contador++; return EOL;}
 "\t"                                   {strncpy(yylval.simbolo, yytext, 50); return IDENT;}
 
 %%
-/* Fim das Regras */
-/* Código C abaixo será incluído nos fontes. */
 
 int yywrap() {}
